@@ -75,7 +75,7 @@ GROUP BY o.id;
 CREATE OR REPLACE VIEW v_users AS
 SELECT id, email, is_admin, created_at FROM users;
 
---Ampliamos tabla Orders para obtener datos de compra
+-- Ampliamos tabla Orders para obtener datos de compra
 
 ALTER TABLE orders
 ADD COLUMN shipping_name      VARCHAR(120)  NOT NULL,
@@ -87,3 +87,7 @@ ADD COLUMN card_brand         VARCHAR(20),
 ADD COLUMN ip_address         VARCHAR(45),
 ADD COLUMN latitude           DECIMAL(10, 8),
 ADD COLUMN longitude          DECIMAL(11, 8);
+
+-- Ampliamos bases de tabla user
+
+ALTER TABLE users ADD COLUMN password_hash CHAR(255) NOT NULL;

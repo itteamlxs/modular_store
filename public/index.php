@@ -5,12 +5,10 @@ require_once __DIR__ . '/../core/bootstrap.php';
 require_once __DIR__ . '/../core/Database.php';
 require_once __DIR__ . '/../core/Router.php';
 
-/* Cargamos el controlador del catálogo */
-require_once __DIR__ . '/../modules/catalog/controllers/ProductController.php';
+// Cargar controladores de todos los módulos
+foreach (glob(__DIR__ . '/../modules/*/controllers/*.php') as $file) {
+    require_once $file;
+}
 
-$router = new Router();
-
-/* Cargamos las rutas del catálogo */
-require_once __DIR__ . '/../modules/catalog/routes.php';
-
+$router = require __DIR__ . '/../core/Routes.php';
 $router->dispatch();
