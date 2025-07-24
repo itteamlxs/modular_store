@@ -18,5 +18,9 @@ $router = new Router();
 require_once __DIR__ . '/../modules/catalog/routes.php';
 require_once __DIR__ . '/../modules/admin/routes.php';
 
+// Debug: mostrar información de la solicitud
+if ($_ENV['APP_ENV'] === 'development') {
+    error_log("Request: " . $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI']);
+}
+
 $router->dispatch();
-?>

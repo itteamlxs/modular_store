@@ -33,21 +33,38 @@ class Router
         // Normalizar el path - remover trailing slash excepto para root
         $normalizedPath = $path === '/' ? '/' : rtrim($path, '/');
         
+        // Debug: mostrar la ruta que se está buscando (solo en desarrollo)
+        if ($_ENV['APP_ENV'] === 'development') {
+            error_log("Router: Looking for route: $method $normalizedPath");
+        }
+        
         // Buscar coincidencia exacta primero
         foreach ($this->routes as [$routeMethod, $routePath, $handler]) {
             if ($method === $routeMethod && $normalizedPath === $routePath) {
                 try {
+                    if ($_ENV['APP_ENV'] === 'development') {
+                        error_log("Router: Found matching route: $routeMethod $routePath");
+                    }
                     $handler();
                     return;
                 } catch (Exception $e) {
                     http_response_code(500);
                     if ($_ENV['APP_ENV'] === 'development') {
-                        echo "Error: " . $e->getMessage();
+                        echo "Error: " . $e->getMessage() . "<br>";
+                        echo "File: " . $e->getFile() . " Line: " . $e->getLine();
                     } else {
                         echo 'Internal Server Error';
                     }
                     return;
                 }
+            }
+        }
+        
+        // Debug: mostrar todas las rutas registradas
+        if ($_ENV['APP_ENV'] === 'development') {
+            error_log("Router: No matching route found. Available routes:");
+            foreach ($this->routes as [$routeMethod, $routePath, $handler]) {
+                error_log("  $routeMethod $routePath");
             }
         }
         
@@ -64,8 +81,9 @@ class Router
     <div class="container mt-5 text-center">
         <h1 class="display-1">404</h1>
         <h2>Page Not Found</h2>
-        <p class="lead">The requested URL was not found on this server.</p>
+        <p class="lead">The requested URL "' . htmlspecialchars($normalizedPath) . '" was not found on this server.</p>
         <a href="/modular-store" class="btn btn-primary">Go Home</a>
+        ' . ($_ENV['APP_ENV'] === 'development' ? '<div class="mt-4"><small>Available routes:<br>' . implode('<br>', array_map(fn($r) => $r[0] . ' ' . $r[1], $this->routes)) . '</small></div>' : '') . '
     </div>
 </body>
 </html>';

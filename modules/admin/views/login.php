@@ -13,6 +13,10 @@
         <div class="alert alert-danger">
             <?php if ($_GET['error'] === 'invalid'): ?>
                 Invalid email or password.
+            <?php elseif ($_GET['error'] === 'missing'): ?>
+                Please fill in all fields.
+            <?php elseif ($_GET['error'] === 'system'): ?>
+                System error. Please try again.
             <?php else: ?>
                 Login failed. Please try again.
             <?php endif; ?>
@@ -20,13 +24,17 @@
     <?php endif; ?>
     
     <form action="/modular-store/public/admin/login" method="post">
-        <input type="email" name="email" class="form-control mb-2" placeholder="Email" required>
-        <input type="password" name="password" class="form-control mb-2" placeholder="Password" required>
-        <button class="btn btn-primary w-100">Login</button>
+        <div class="mb-3">
+            <input type="email" name="email" class="form-control" placeholder="Email" required>
+        </div>
+        <div class="mb-3">
+            <input type="password" name="password" class="form-control" placeholder="Password" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Login</button>
     </form>
     
     <div class="mt-3 text-center">
-        <a href="/modular-store/modules/catalog/views/list.php" class="text-muted">← Back to Store</a>
+        <a href="/modular-store/public" class="text-muted">← Back to Store</a>
     </div>
 </div>
 </body>
