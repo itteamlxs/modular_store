@@ -29,8 +29,21 @@ class Database
             $where = implode(' AND ', array_map(fn($k) => "{$k} = :{$k}", array_keys($params)));
             $sql .= " WHERE {$where}";
         }
+        
+        // Debug
+        if ($_ENV['APP_ENV'] === 'development') {
+            error_log("Database query: $sql with params: " . json_encode($params));
+        }
+        
         $stmt = self::conn()->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll();
+        $result = $stmt->fetchAll();
+        
+        // Debug
+        if ($_ENV['APP_ENV'] === 'development') {
+            error_log("Database result count: " . count($result));
+        }
+        
+        return $result;
     }
 }

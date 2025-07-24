@@ -91,3 +91,31 @@ ADD COLUMN longitude          DECIMAL(11, 8);
 -- Ampliamos bases de tabla user
 
 ALTER TABLE users ADD COLUMN password_hash CHAR(255) NOT NULL;
+
+-- Vistas del modulo admin
+
+-- Vistas adicionales para el módulo admin
+USE modules_store;
+
+-- Vista completa de productos para admin (incluye sin stock)
+CREATE OR REPLACE VIEW v_admin_products AS
+SELECT p.id, p.name, p.price, p.stock, p.image_url, p.created_at, p.updated_at,
+       c.id as category_id, c.name AS category
+FROM products p JOIN categories c ON p.category_id = c.id;
+
+-- Vista de órdenes detallada para admin
+CREATE OR REPLACE VIEW v_admin_orders AS
+SELECT o.id, o.user_id, o.stripe_id, o.total, o.status, o.created_at,
+       o.shipping_name, o.shipping_email, o.shipping_address, o.phone,
+       o.card_last4, o.card_brand,
+       COUNT(oi.id) as item_count
+FROM orders o
+LEFT JOIN order_items oi ON oi.order_id = o.id
+GROUP BY o.id
+ORDER BY o.created_at DESC;
+
+-- Vista de usuarios para admin (incluye password_hash para validaciones)
+CREATE OR REPLACE VIEW v_admin_users AS
+SELECT id, email, password_hash, is_admin, created_at 
+FROM users 
+ORDER BY created_at DESC;
