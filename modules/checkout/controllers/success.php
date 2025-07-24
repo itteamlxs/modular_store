@@ -87,14 +87,22 @@ curl_setopt($ch, CURLOPT_URL, 'http://localhost/modular-store/modules/email/cont
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($emailData));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 $response = curl_exec($ch);
-curl_close($ch);
 
-// Verificar respuesta
-$response = json_decode($response, true);
-if (isset($response['error'])) {
-    error_log('Failed to send email: ' . $response['error']);
+// Verificar respuesta con mejor manejo de errores
+$emailSent = false;
+if (curl_errno($ch)) {
+    error_log('CURL Error sending email: ' . curl_error($ch));
+} else {
+    $response = json_decode($response, true);
+    if (isset($response['success'])) {
+        $emailSent = true;
+    } elseif (isset($response['error'])) {
+        error_log('Failed to send email: ' . $response['error']);
+    }
 }
+curl_close($ch);
 
 ?>
 <!doctype html>
@@ -108,6 +116,13 @@ if (isset($response['error'])) {
 <div class="container text-center mt-5">
     <h1 class="text-success">Payment succeeded!</h1>
     <p>Order #<?= htmlspecialchars($orderId) ?> is now paid.</p>
+    
+    <?php if ($emailSent): ?>
+        <div class="alert alert-success">
+            Confirmation email sent to <?= htmlspecialchars($shippingEmail) ?>
+        </div>
+    <?php endif; ?>
+    
     <a class="btn btn-primary" href="/modular-store/modules/catalog/views/list.php">Back to catalog</a>
 </div>
 </body>
