@@ -1,11 +1,16 @@
 <?php if (!isset($_SESSION['admin_id'])) { die('Access denied'); } ?>
-<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Admin Panel</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
 <body class="bg-light">
 <div class="container mt-4">
     <h1>Dashboard</h1>
-    <a class="btn btn-outline-primary" href="/modular-store/admin/users/new">Add admin</a>
-    <a class="btn btn-outline-danger" href="/modular-store/admin/logout">Logout</a>
+    <a class="btn btn-outline-primary" href="/modular-store/public/admin/users/new">Add admin</a>
+    <a class="btn btn-outline-danger" href="/modular-store/public/admin/logout">Logout</a>
 
     <table class="table mt-3">
         <thead><tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
@@ -20,4 +25,6 @@
         <?php endforeach; ?>
         </tbody>
     </table>
-</div></body></html>
+</div>
+</body>
+</html>

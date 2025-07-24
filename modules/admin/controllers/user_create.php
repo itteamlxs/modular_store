@@ -6,7 +6,7 @@ class AdminUserController
     public function createForm(): void
     {
         if (!isset($_SESSION['admin_id'])) {
-            header('Location: /modular-store/admin/login');
+            header('Location: /admin/login');
             exit;
         }
         require __DIR__ . '/../views/user_form.php';
@@ -23,7 +23,7 @@ class AdminUserController
         $pwd   = $_POST['password'] ?? '';
 
         if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{9,}$/', $pwd)) {
-            header('Location: /modular-store/admin/users/new?error=weak');
+            header('Location: /admin/users/new?error=weak');
             exit;
         }
 
@@ -32,6 +32,6 @@ class AdminUserController
             "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)"
         );
         $stmt->execute([$email, $hash, 1]);
-        header('Location: /modular-store/admin');
+        header('Location: /admin');
     }
 }
