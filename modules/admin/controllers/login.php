@@ -22,9 +22,12 @@ class AdminLoginController
         if ($row && password_verify($pass, $row['password_hash'])) {
             session_regenerate_id(true);
             $_SESSION['admin_id'] = $row['id'];
-            header('Location: /admin'); // Redirige a la página correcta
+            header('Location: /modular-store/public/admin');
             exit;
         }
-        header('Location: /admin/login'); // Redirige de nuevo al login si falla
+        
+        // Redirect back to login with error
+        header('Location: /modular-store/public/admin/login?error=invalid');
+        exit;
     }
 }

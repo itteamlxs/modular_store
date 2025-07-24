@@ -54,6 +54,15 @@
         <div class="col-md-9 col-lg-10">
             <h1 class="h3 mb-4">Dashboard</h1>
 
+            <?php if (isset($_GET['success'])): ?>
+                <div class="alert alert-success alert-dismissible fade show">
+                    <?php if ($_GET['success'] === 'admin_created'): ?>
+                        Admin user created successfully!
+                    <?php endif; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
             <!-- Stats Cards -->
             <div class="row g-3 mb-4">
                 <div class="col-md-3">

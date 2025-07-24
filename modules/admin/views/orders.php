@@ -92,7 +92,7 @@
                                             <td>
                                                 <form action="/modular-store/public/admin/orders/status" method="post" class="d-inline">
                                                     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-                                                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 100px;">
                                                         <option value="pending" <?= $order['status'] === 'pending' ? 'selected' : '' ?>>Pending</option>
                                                         <option value="paid" <?= $order['status'] === 'paid' ? 'selected' : '' ?>>Paid</option>
                                                         <option value="shipped" <?= $order['status'] === 'shipped' ? 'selected' : '' ?>>Shipped</option>
