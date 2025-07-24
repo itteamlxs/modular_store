@@ -74,11 +74,74 @@ foreach ($orderItems as [$prodId, $qty, $price]) {
 // Vaciar carrito
 $_SESSION['cart'] = [];
 
+// Crear tabla de productos para el correo
+$productsTable = '';
+$totalAmount = 0;
+foreach ($orderItems as [$prodId, $qty, $price]) {
+    $product = Database::view('v_products', ['id' => $prodId])[0] ?? null;
+    if ($product) {
+        $priceFloat = (float)$price;
+        $subtotal = $qty * $priceFloat;
+        $totalAmount += $subtotal;
+        $productsTable .= "
+        <tr>
+            <td style='padding: 8px; border-bottom: 1px solid #eee;'>{$product['name']}</td>
+            <td style='padding: 8px; border-bottom: 1px solid #eee; text-align: center;'>$qty</td>
+            <td style='padding: 8px; border-bottom: 1px solid #eee; text-align: right;'>$" . number_format($priceFloat, 2) . "</td>
+            <td style='padding: 8px; border-bottom: 1px solid #eee; text-align: right;'>$" . number_format($subtotal, 2) . "</td>
+        </tr>";
+    }
+}
+
+// Crear el cuerpo del correo personalizado
+$emailBody = "
+<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;'>
+    <h2 style='color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;'>Order Confirmation</h2>
+    
+    <p>Hello <strong>" . htmlspecialchars($shippingName) . "</strong>,</p>
+    
+    <p>We confirm that we have received your order. Here are the details:</p>
+    
+    <div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+        <p><strong>Order ID:</strong> #$orderId</p>
+        <p><strong>Total:</strong> $" . number_format($totalAmount, 2) . "</p>
+    </div>
+    
+    <h3 style='color: #2c3e50; margin-top: 30px;'>Products ordered:</h3>
+    <table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>
+        <thead>
+            <tr style='background: #3498db; color: white;'>
+                <th style='padding: 12px; text-align: left;'>Product</th>
+                <th style='padding: 12px; text-align: center;'>Qty</th>
+                <th style='padding: 12px; text-align: right;'>Price</th>
+                <th style='padding: 12px; text-align: right;'>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            $productsTable
+        </tbody>
+        <tfoot>
+            <tr style='background: #ecf0f1; font-weight: bold;'>
+                <td colspan='3' style='padding: 12px; text-align: right;'>Total:</td>
+                <td style='padding: 12px; text-align: right;'>$" . number_format($totalAmount, 2) . "</td>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <p style='margin-top: 30px;'>Thank you for your order! We'll process it shortly and send you shipping details.</p>
+    
+    <div style='margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;'>
+        <p>If you have any questions, please contact our support team.</p>
+        <p>Best regards,<br><strong>Modular Store Team</strong></p>
+    </div>
+</div>
+";
+
 // Preparar datos del correo electrónico
 $emailData = [
     'to'      => $shippingEmail,
-    'subject' => 'Order Confirmation',
-    'body'    => "Thank you for your order! Order ID: $orderId"
+    'subject' => "Order Confirmation #$orderId - Modular Store",
+    'body'    => $emailBody
 ];
 
 // Enviar correo electrónico de confirmación
