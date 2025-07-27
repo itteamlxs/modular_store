@@ -17,7 +17,10 @@ $products = \Database::view('v_products');
 <nav class="navbar navbar-dark bg-dark mb-4">
     <div class="container-fluid">
         <a class="navbar-brand" href="/modular-store/modules/catalog/views/list.php">Modular Store</a>
-        <a class="btn btn-outline-light btn-sm" href="/modular-store/modules/cart/controllers/view.php">Cart</a>
+        <div>
+            <a class="btn btn-outline-light btn-sm me-2" href="/modular-store/modules/cart/controllers/view.php">Cart</a>
+            <a class="btn btn-outline-secondary btn-sm" href="/modular-store/modules/admin/controllers/login.php">Admin</a>
+        </div>
     </div>
 </nav>
 

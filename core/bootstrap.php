@@ -2,7 +2,6 @@
 declare(strict_types=1);
 
 use Dotenv\Dotenv;
-use HtmlSanitizer\Sanitizer;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -21,12 +20,8 @@ session_start([
     'cookie_samesite' => 'Lax',
 ]);
 
-# Global input sanitizer
+# Simple input sanitizer
 function sanitize(string $dirty, string $context = 'string'): string
 {
-    static $sanitizer;
-    if (!$sanitizer) {
-        $sanitizer = Sanitizer::create(['extensions' => ['basic']]);
-    }
-    return $sanitizer->sanitize($dirty);
+    return htmlspecialchars(trim($dirty), ENT_QUOTES, 'UTF-8');
 }
