@@ -81,6 +81,7 @@ $totalRevenue = Database::conn()->query("SELECT SUM(total) as revenue FROM order
                 <div class="card-body">
                     <a href="/modular-store/modules/admin/controllers/products.php" class="btn btn-primary me-2">Manage Products</a>
                     <a href="/modular-store/modules/admin/controllers/orders.php" class="btn btn-success me-2">Manage Orders</a>
+                    <a href="/modular-store/modules/admin/controllers/envios.php" class="btn btn-warning me-2">Gestión de Envíos</a>
                     <a href="/modular-store/modules/admin/controllers/users.php" class="btn btn-info me-2">Manage Admins</a>
                     <a href="/modular-store/modules/catalog/views/list.php" class="btn btn-outline-secondary">View Store</a>
                 </div>
