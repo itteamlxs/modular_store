@@ -5,7 +5,20 @@ require_once __DIR__ . '/../../../core/bootstrap.php';
 require_once __DIR__ . '/../../../core/Database.php';
 require_once __DIR__ . '/../../admin/helpers/auth.php';
 
-$products = \Database::view('v_products');
+// Búsqueda
+$search = sanitize($_GET['search'] ?? '');
+$whereClause = '';
+$params = [];
+
+if ($search) {
+    $whereClause = 'WHERE name LIKE ? OR category LIKE ?';
+    $params = ["%$search%", "%$search%"];
+}
+
+$sql = "SELECT * FROM v_products $whereClause ORDER BY name ASC";
+$stmt = Database::conn()->prepare($sql);
+$stmt->execute($params);
+$products = $stmt->fetchAll();
 ?>
 <!doctype html>
 <html lang="en">
@@ -32,135 +45,61 @@ $products = \Database::view('v_products');
 <div class="container">
     <h1 class="mb-4">Product Catalog</h1>
 
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="position-relative">
-                <input type="text" class="form-control" id="searchInput" placeholder="Search products...">
-                <div id="searchResults" class="position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-sm" style="z-index: 1000; display: none; max-height: 300px; overflow-y: auto;"></div>
-            </div>
+    <!-- Formulario de búsqueda -->
+    <form method="GET" class="row mb-4">
+        <div class="col-md-8">
+            <input type="text" name="search" class="form-control" 
+                   placeholder="Search products..." 
+                   value="<?= htmlspecialchars($search) ?>">
         </div>
-    </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+        <div class="col-md-2">
+            <a href="/modular-store/modules/catalog/views/list.php" class="btn btn-outline-secondary w-100">Clear</a>
+        </div>
+    </form>
 
-    <div id="productGrid">
-        <?php if (!$products): ?>
-            <div class="alert alert-warning">No products available.</div>
-        <?php else: ?>
-            <div class="row row-cols-1 row-cols-md-3 g-4">
-                <?php foreach ($products as $p): ?>
-                    <div class="col">
-                        <div class="card h-100">
-                            <?php if ($p['image_url']): ?>
-                                <img src="<?= htmlspecialchars($p['image_url']) ?>" class="card-img-top" alt="<?= htmlspecialchars($p['name']) ?>">
-                            <?php endif; ?>
-                            <div class="card-body">
-                                <h5 class="card-title"><?= htmlspecialchars($p['name']) ?></h5>
-                                <p class="card-text text-muted"><?= htmlspecialchars($p['category']) ?></p>
-                                <p class="fw-bold">$<?= number_format((float)$p['price'], 2) ?></p>
-                                <form action="/modular-store/modules/cart/controllers/add.php" method="post">
-                                    <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-                                    <button class="btn btn-primary btn-sm">Add to Cart</button>
-                                </form>
-                            </div>
+    <!-- Mostrar término de búsqueda -->
+    <?php if ($search): ?>
+        <div class="alert alert-info">
+            Search results for: <strong><?= htmlspecialchars($search) ?></strong> 
+            (<?= count($products) ?> products found)
+        </div>
+    <?php endif; ?>
+
+    <!-- Grid de productos -->
+    <?php if (!$products): ?>
+        <div class="alert alert-warning">
+            <?= $search ? 'No products found for your search.' : 'No products available.' ?>
+        </div>
+    <?php else: ?>
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            <?php foreach ($products as $p): ?>
+                <div class="col">
+                    <div class="card h-100">
+                        <?php if ($p['image_url']): ?>
+                            <img src="<?= htmlspecialchars($p['image_url']) ?>" 
+                                 class="card-img-top" 
+                                 alt="<?= htmlspecialchars($p['name']) ?>"
+                                 style="height: 200px; object-fit: cover;">
+                        <?php endif; ?>
+                        <div class="card-body">
+                            <h5 class="card-title"><?= htmlspecialchars($p['name']) ?></h5>
+                            <p class="card-text text-muted"><?= htmlspecialchars($p['category']) ?></p>
+                            <p class="fw-bold">$<?= number_format((float)$p['price'], 2) ?></p>
+                            <form action="/modular-store/modules/cart/controllers/add.php" method="post">
+                                <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
+                                <button class="btn btn-primary btn-sm">Add to Cart</button>
+                            </form>
                         </div>
                     </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-    const productGrid = document.getElementById('productGrid');
-    let searchTimeout;
-    let allProducts = <?= json_encode($products) ?>;
-
-    function renderProducts(products) {
-        if (!products.length) {
-            productGrid.innerHTML = '<div class="alert alert-warning">No products found.</div>';
-            return;
-        }
-
-        const html = `
-            <div class="row row-cols-1 row-cols-md-3 g-4">
-                ${products.map(p => `
-                    <div class="col">
-                        <div class="card h-100">
-                            ${p.image_url ? `<img src="${p.image_url}" class="card-img-top" alt="${p.name}">` : ''}
-                            <div class="card-body">
-                                <h5 class="card-title">${p.name}</h5>
-                                <p class="card-text text-muted">${p.category}</p>
-                                <p class="fw-bold">$${parseFloat(p.price).toFixed(2)}</p>
-                                <form action="/modular-store/modules/cart/controllers/add.php" method="post">
-                                    <input type="hidden" name="product_id" value="${p.id}">
-                                    <button class="btn btn-primary btn-sm">Add to Cart</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-        productGrid.innerHTML = html;
-    }
-
-    searchInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        
-        clearTimeout(searchTimeout);
-        
-        if (query.length < 2) {
-            searchResults.style.display = 'none';
-            renderProducts(allProducts);
-            return;
-        }
-
-        searchTimeout = setTimeout(() => {
-            fetch(`/modular-store/public/api/search?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(products => {
-                    renderProducts(products);
-                    
-                    if (products.length > 0) {
-                        const resultsHtml = products.slice(0, 5).map(p => `
-                            <div class="p-2 border-bottom search-item" style="cursor: pointer;" data-name="${p.name}">
-                                <div class="d-flex align-items-center">
-                                    <small class="text-muted me-2">${p.category}</small>
-                                    <span>${p.name}</span>
-                                    <span class="ms-auto fw-bold">$${parseFloat(p.price).toFixed(2)}</span>
-                                </div>
-                            </div>
-                        `).join('');
-                        
-                        searchResults.innerHTML = resultsHtml;
-                        searchResults.style.display = 'block';
-                        
-                        document.querySelectorAll('.search-item').forEach(item => {
-                            item.addEventListener('click', function() {
-                                searchInput.value = this.dataset.name;
-                                searchResults.style.display = 'none';
-                            });
-                        });
-                    } else {
-                        searchResults.style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.error('Search error:', error);
-                    searchResults.style.display = 'none';
-                });
-        }, 300);
-    });
-
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-            searchResults.style.display = 'none';
-        }
-    });
-});
-</script>
 </body>
 </html>
