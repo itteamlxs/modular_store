@@ -22,15 +22,8 @@ $totalRevenue = Database::conn()->query("SELECT SUM(total) as revenue FROM order
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-<nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container-fluid">
-        <span class="navbar-brand">Admin Panel</span>
-        <div>
-            <span class="text-light me-3">Welcome, <?= htmlspecialchars($_SESSION['admin_email']) ?></span>
-            <a href="/modular-store/modules/admin/controllers/logout.php" class="btn btn-outline-light btn-sm">Logout</a>
-        </div>
-    </div>
-</nav>
+
+<?php include __DIR__ . '/../views/nav.php'; ?>
 
 <div class="container">
     <h1 class="mb-4">Dashboard</h1>
@@ -83,6 +76,7 @@ $totalRevenue = Database::conn()->query("SELECT SUM(total) as revenue FROM order
                     <a href="/modular-store/modules/admin/controllers/orders.php" class="btn btn-success me-2">Manage Orders</a>
                     <a href="/modular-store/modules/admin/controllers/envios.php" class="btn btn-warning me-2">Gestión de Envíos</a>
                     <a href="/modular-store/modules/admin/controllers/users.php" class="btn btn-info me-2">Manage Admins</a>
+                    <a href="/modular-store/modules/admin/controllers/reports.php" class="btn btn-secondary me-2">Reports</a>
                     <a href="/modular-store/modules/catalog/views/list.php" class="btn btn-outline-secondary">View Store</a>
                 </div>
             </div>

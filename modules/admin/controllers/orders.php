@@ -85,12 +85,8 @@ if ($action === 'view' && isset($_GET['id'])) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-<nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/modular-store/modules/admin/controllers/dashboard.php">← Admin Panel</a>
-        <span class="navbar-brand">Manage Orders</span>
-    </div>
-</nav>
+
+<?php include __DIR__ . '/../views/nav.php'; ?>
 
 <div class="container">
     <?php if ($message): ?>
