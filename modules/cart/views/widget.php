@@ -9,12 +9,8 @@ $total = array_sum(array_map(fn($i) => $i['price'] * $i['qty'], $items));
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-<nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/modular-store/modules/catalog/views/list.php">← Catalog</a>
-        <span class="navbar-brand">Cart</span>
-    </div>
-</nav>
+
+<?php include __DIR__ . '/nav.php'; ?>
 
 <div class="container">
     <h1>Your Cart</h1>

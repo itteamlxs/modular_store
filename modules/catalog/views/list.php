@@ -28,19 +28,8 @@ $products = $stmt->fetchAll();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-<nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/modular-store/modules/catalog/views/list.php">Modular Store</a>
-        <div>
-            <a class="btn btn-outline-light btn-sm me-2" href="/modular-store/modules/cart/controllers/view.php">Cart</a>
-            <?php if (isAdmin()): ?>
-                <a class="btn btn-outline-success btn-sm" href="/modular-store/modules/admin/controllers/dashboard.php">Admin Panel</a>
-            <?php else: ?>
-                <a class="btn btn-outline-secondary btn-sm" href="/modular-store/modules/admin/controllers/login.php">Admin</a>
-            <?php endif; ?>
-        </div>
-    </div>
-</nav>
+
+<?php include __DIR__ . '/nav.php'; ?>
 
 <div class="container">
     <h1 class="mb-4">Product Catalog</h1>
