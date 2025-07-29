@@ -76,10 +76,13 @@ $products = $stmt->fetchAll();
                         <h5 class="card-title"><?= htmlspecialchars($p['name']) ?></h5>
                         <p class="card-text text-muted"><?= htmlspecialchars($p['category']) ?></p>
                         <p class="fw-bold">$<?= number_format((float)$p['price'], 2) ?></p>
-                        <form action="/modular-store/modules/cart/controllers/add.php" method="post">
-                            <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
-                            <button class="btn btn-primary btn-sm">Add to Cart</button>
-                        </form>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm" onclick="showProductModal(<?= htmlspecialchars(json_encode($p)) ?>)">Ver</button>
+                            <form action="/modular-store/modules/cart/controllers/add.php" method="post" class="d-inline">
+                                <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
+                                <button class="btn btn-primary btn-sm">Add to Cart</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -119,3 +122,5 @@ $products = $stmt->fetchAll();
         </div>
     <?php endif; ?>
 <?php endif; ?>
+
+<?php include __DIR__ . '/product-modal.php'; ?>
