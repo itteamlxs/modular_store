@@ -16,6 +16,8 @@ require_once __DIR__ . '/../../admin/helpers/auth.php';
 
 <?php include __DIR__ . '/nav.php'; ?>
 
+<?php include __DIR__ . '/hero.php'; ?>
+
 <div class="container">
     <h1 class="mb-4">Product Catalog</h1>
     
