@@ -1,0 +1,41 @@
+# Proteger archivos sensibles
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "composer.json">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "composer.lock">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Proteger directorios del core y vendor
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Bloquear acceso directo a core/
+    RewriteRule ^core/ - [F,L]
+    
+    # Bloquear acceso directo a vendor/
+    RewriteRule ^vendor/ - [F,L]
+    
+    # Redirigir todo lo que no sea public/ al directorio public
+    RewriteCond %{REQUEST_URI} !^/modular-store/public/
+    RewriteCond %{REQUEST_URI} !^/modular-store/modules/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Desactivar listado de directorios
+Options -Indexes
+
+# Proteger contra ataques comunes
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
