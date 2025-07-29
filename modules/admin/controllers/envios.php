@@ -9,33 +9,44 @@ requireAdmin();
 
 $message = '';
 
-// Procesar cambios de estado
+// Procesar cambios de estado de envío
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shipping_status'])) {
+    $shipmentId = (int)($_POST['shipment_id'] ?? 0);
     $orderId = (int)($_POST['order_id'] ?? 0);
     $newStatus = $_POST['new_status'] ?? '';
+    $notes = sanitize($_POST['notes'] ?? '');
     
     $allowedStatuses = ['shipped', 'cancelled', 'returned'];
     if ($orderId && in_array($newStatus, $allowedStatuses)) {
-        $stmt = Database::conn()->prepare("UPDATE orders SET status = ? WHERE id = ? AND status = 'paid'");
-        $stmt->execute([$newStatus, $orderId]);
-        $message = ucfirst($newStatus) . ' status updated successfully';
+        
+        // Generar tracking automático para shipped
+        $trackingNumber = '';
+        if ($newStatus === 'shipped') {
+            $trackingNumber = 'TRK' . date('Ymd') . str_pad((string)$orderId, 4, '0', STR_PAD_LEFT) . rand(100, 999);
+        }
+        
+        // Crear shipment si no existe
+        if (!$shipmentId) {
+            $stmt = Database::conn()->prepare(
+                "INSERT INTO shipments (order_id, status, tracking_number, shipped_at, notes) VALUES (?, ?, ?, ?, ?)"
+            );
+            $shippedAt = $newStatus === 'shipped' ? date('Y-m-d H:i:s') : null;
+            $stmt->execute([$orderId, $newStatus, $trackingNumber, $shippedAt, $notes]);
+        } else {
+            // Actualizar shipment existente
+            $stmt = Database::conn()->prepare(
+                "UPDATE shipments SET status = ?, tracking_number = ?, shipped_at = ?, notes = ?, updated_at = NOW() WHERE id = ?"
+            );
+            $shippedAt = $newStatus === 'shipped' ? date('Y-m-d H:i:s') : null;
+            $stmt->execute([$newStatus, $trackingNumber, $shippedAt, $notes, $shipmentId]);
+        }
+        $message = 'Shipment status updated successfully';
     }
 }
 
-// Obtener pedidos pagados pendientes de envío
-$stmt = Database::conn()->prepare(
-    "SELECT o.id, o.shipping_name, o.shipping_email, o.shipping_address, o.total, o.created_at,
-            COUNT(oi.id) as item_count
-     FROM orders o
-     LEFT JOIN order_items oi ON oi.order_id = o.id
-     WHERE o.status = 'paid'
-     GROUP BY o.id
-     ORDER BY o.created_at ASC"
-);
-$stmt->execute();
-$pedidosEnvio = $stmt->fetchAll();
-
-$totalPendientes = count($pedidosEnvio);
+// Obtener envíos pendientes
+$envios = Database::view('v_shipments');
+$totalPendientes = count(array_filter($envios, fn($e) => $e['shipment_status'] === 'pending'));
 ?>
 <!doctype html>
 <html lang="en">
@@ -59,63 +70,83 @@ $totalPendientes = count($pedidosEnvio);
     <?php endif; ?>
     
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Pedidos Pendientes de Envío</h1>
+        <h1>Gestión de Envíos</h1>
         <span class="badge bg-warning fs-6"><?= $totalPendientes ?> pendientes</span>
     </div>
     
-    <?php if ($pedidosEnvio): ?>
+    <?php if ($envios): ?>
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>Order ID</th>
                         <th>Cliente</th>
-                        <th>Email</th>
                         <th>Dirección</th>
                         <th>Total</th>
                         <th>Items</th>
-                        <th>Fecha Pago</th>
+                        <th>Estado Envío</th>
+                        <th>Tracking</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($pedidosEnvio as $pedido): ?>
-                        <tr>
-                            <td><strong>#<?= $pedido['id'] ?></strong></td>
-                            <td><?= htmlspecialchars($pedido['shipping_name']) ?></td>
-                            <td><?= htmlspecialchars($pedido['shipping_email']) ?></td>
+                    <?php foreach ($envios as $envio): ?>
+                        <tr class="<?= $envio['shipment_status'] === 'pending' ? 'table-warning' : '' ?>">
+                            <td><strong>#<?= $envio['order_id'] ?></strong></td>
                             <td>
-                                <small><?= htmlspecialchars($pedido['shipping_address']) ?></small>
+                                <?= htmlspecialchars($envio['shipping_name']) ?><br>
+                                <small class="text-muted"><?= htmlspecialchars($envio['shipping_email']) ?></small>
                             </td>
-                            <td><strong>$<?= number_format((float)$pedido['total'], 2) ?></strong></td>
-                            <td><?= $pedido['item_count'] ?></td>
-                            <td><?= date('M j, Y g:i A', strtotime($pedido['created_at'])) ?></td>
+                            <td><small><?= htmlspecialchars($envio['shipping_address']) ?></small></td>
+                            <td><strong>$<?= number_format((float)$envio['total'], 2) ?></strong></td>
+                            <td><?= $envio['item_count'] ?></td>
                             <td>
-                                <form method="post" class="d-inline">
-                                    <input type="hidden" name="update_shipping_status" value="1">
-                                    <input type="hidden" name="order_id" value="<?= $pedido['id'] ?>">
-                                    <div class="btn-group" role="group">
-                                        <button type="submit" name="new_status" value="shipped" 
-                                                class="btn btn-success btn-sm" title="Marcar como Enviado"
-                                                onclick="return confirm('¿Marcar como enviado?')">
-                                            <i class="fas fa-truck me-1"></i>Enviado
-                                        </button>
-                                        <button type="submit" name="new_status" value="cancelled" 
-                                                class="btn btn-danger btn-sm" title="Cancelar Pedido"
-                                                onclick="return confirm('¿Cancelar este pedido?')">
-                                            <i class="fas fa-times me-1"></i>Cancelar
-                                        </button>
-                                        <button type="submit" name="new_status" value="returned" 
-                                                class="btn btn-warning btn-sm" title="Marcar como Devuelto"
-                                                onclick="return confirm('¿Marcar como devuelto?')">
-                                            <i class="fas fa-undo me-1"></i>Devuelto
-                                        </button>
+                                <span class="badge bg-<?= $envio['shipment_status'] === 'pending' ? 'warning' : 
+                                    ($envio['shipment_status'] === 'shipped' ? 'success' : 
+                                    ($envio['shipment_status'] === 'returned' ? 'info' : 'danger')) ?>">
+                                    <?= ucfirst($envio['shipment_status']) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <?= $envio['tracking_number'] ? htmlspecialchars($envio['tracking_number']) : '-' ?>
+                            </td>
+                            <td>
+                                <?php if ($envio['shipment_status'] === 'pending'): ?>
+                                    <form method="post" class="d-inline">
+                                        <input type="hidden" name="update_shipping_status" value="1">
+                                        <input type="hidden" name="shipment_id" value="<?= $envio['id'] ?>">
+                                        <input type="hidden" name="order_id" value="<?= $envio['order_id'] ?>">
+                                        
+                                        <div class="mb-2">
+                                            <input type="text" name="notes" class="form-control form-control-sm" 
+                                                   placeholder="Notas del envío (opcional)" value="<?= htmlspecialchars($envio['notes'] ?? '') ?>">
+                                        </div>
+                                        
+                                        <div class="btn-group" role="group">
+                                            <button type="submit" name="new_status" value="shipped" 
+                                                    class="btn btn-success btn-sm" title="Marcar como Enviado">
+                                                <i class="fas fa-truck"></i> Enviar
+                                            </button>
+                                            <button type="submit" name="new_status" value="cancelled" 
+                                                    class="btn btn-danger btn-sm" title="Cancelar">
+                                                <i class="fas fa-times"></i> Cancelar
+                                            </button>
+                                            <button type="submit" name="new_status" value="returned" 
+                                                    class="btn btn-warning btn-sm" title="Devuelto">
+                                                <i class="fas fa-undo"></i> Devolver
+                                            </button>
+                                        </div>
+                                    </form>
+                                <?php else: ?>
+                                    <div class="small">
+                                        <?php if ($envio['shipped_at']): ?>
+                                            <strong><?= date('M j, Y H:i', strtotime($envio['shipped_at'])) ?></strong><br>
+                                        <?php endif; ?>
+                                        <?php if ($envio['notes']): ?>
+                                            <em class="text-muted"><?= htmlspecialchars($envio['notes']) ?></em>
+                                        <?php endif; ?>
                                     </div>
-                                </form>
-                                <a href="/modular-store/modules/admin/controllers/orders.php?action=view&id=<?= $pedido['id'] ?>" 
-                                   class="btn btn-outline-primary btn-sm ms-2" title="Ver Detalles">
-                                    <i class="fas fa-eye"></i>
-                                </a>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -126,11 +157,8 @@ $totalPendientes = count($pedidosEnvio);
     <?php else: ?>
         <div class="text-center py-5">
             <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-            <h3>¡Excelente trabajo!</h3>
-            <p class="text-muted">No hay pedidos pendientes de envío</p>
-            <a href="/modular-store/modules/admin/controllers/orders.php" class="btn btn-primary">
-                Ver todos los pedidos
-            </a>
+            <h3>No hay pedidos para enviar</h3>
+            <p class="text-muted">Los envíos aparecerán aquí cuando haya pedidos pagados</p>
         </div>
     <?php endif; ?>
 </div>

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../../core/bootstrap.php';
 require_once __DIR__ . '/../../../core/Database.php';
+require_once __DIR__ . '/../../admin/helpers/auth.php';
 
 $products = \Database::view('v_products');
 ?>
@@ -19,7 +20,11 @@ $products = \Database::view('v_products');
         <a class="navbar-brand" href="/modular-store/modules/catalog/views/list.php">Modular Store</a>
         <div>
             <a class="btn btn-outline-light btn-sm me-2" href="/modular-store/modules/cart/controllers/view.php">Cart</a>
-            <a class="btn btn-outline-secondary btn-sm" href="/modular-store/modules/admin/controllers/login.php">Admin</a>
+            <?php if (isAdmin()): ?>
+                <a class="btn btn-outline-success btn-sm" href="/modular-store/modules/admin/controllers/dashboard.php">Admin Panel</a>
+            <?php else: ?>
+                <a class="btn btn-outline-secondary btn-sm" href="/modular-store/modules/admin/controllers/login.php">Admin</a>
+            <?php endif; ?>
         </div>
     </div>
 </nav>

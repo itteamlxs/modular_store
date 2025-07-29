@@ -5,8 +5,8 @@ require_once __DIR__ . '/../../../core/bootstrap.php';
 require_once __DIR__ . '/../../../core/Database.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = sanitize($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $email = trim(sanitize($_POST['email'] ?? ''));
+    $password = trim($_POST['password'] ?? '');
     
     if (empty($email) || empty($password)) {
         $error = 'Email and password required';

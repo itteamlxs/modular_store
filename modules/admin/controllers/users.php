@@ -13,8 +13,8 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'create') {
-        $email = sanitize($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
+        $email = trim(sanitize($_POST['email'] ?? ''));
+        $password = trim($_POST['password'] ?? '');
         
         if (empty($email) || empty($password)) {
             $error = 'Email and password are required';
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'reset_password') {
         $id = (int)($_POST['id'] ?? 0);
-        $password = $_POST['password'] ?? '';
+        $password = trim($_POST['password'] ?? '');
         
         if ($id === (int)$_SESSION['admin_id']) {
             $error = 'Cannot reset your own password from here';
@@ -48,9 +48,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             $stmt = Database::conn()->prepare("UPDATE users SET password_hash = ? WHERE id = ? AND is_admin = 1");
-            $stmt->execute([$hashedPassword, $id]);
-            $message = 'Password reset successfully';
-            $action = 'list';
+            $success = $stmt->execute([$hashedPassword, $id]);
+            if ($success && $stmt->rowCount() > 0) {
+                $message = 'Password reset successfully';
+                $action = 'list';
+            } else {
+                $error = 'Failed to reset password or user not found';
+            }
+        }
+    } elseif ($action === 'edit') {
+        $id = (int)($_POST['id'] ?? 0);
+        $email = trim(sanitize($_POST['email'] ?? ''));
+        
+        if (empty($email)) {
+            $error = 'Email is required';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Invalid email format';
+        } else {
+            // Check if email exists for other users
+            $stmt = Database::conn()->prepare("SELECT id FROM users WHERE email = ? AND id != ? AND is_admin = 1");
+            $stmt->execute([$email, $id]);
+            if ($stmt->fetch()) {
+                $error = 'Email already exists';
+            } else {
+                $stmt = Database::conn()->prepare("UPDATE users SET email = ? WHERE id = ? AND is_admin = 1");
+                $success = $stmt->execute([$email, $id]);
+                if ($success && $stmt->rowCount() > 0) {
+                    $message = 'Email updated successfully';
+                    // Update session if editing own email
+                    if ($id === (int)$_SESSION['admin_id']) {
+                        $_SESSION['admin_email'] = $email;
+                    }
+                    $action = 'list';
+                } else {
+                    $error = 'Failed to update email or user not found';
+                }
+            }
         }
     }
 }
@@ -60,19 +93,27 @@ if ($action === 'delete' && isset($_GET['id'])) {
     if ($id === (int)$_SESSION['admin_id']) {
         $error = 'Cannot delete your own account';
     } else {
-        Database::conn()->prepare("DELETE FROM users WHERE id = ? AND is_admin = 1")->execute([$id]);
-        $message = 'Admin user deleted successfully';
+        $stmt = Database::conn()->prepare("DELETE FROM users WHERE id = ? AND is_admin = 1");
+        $success = $stmt->execute([$id]);
+        if ($success && $stmt->rowCount() > 0) {
+            $message = 'Admin user deleted successfully';
+        } else {
+            $error = 'Failed to delete user or user not found';
+        }
     }
     $action = 'list';
 }
 
 $users = Database::view('v_admin_users');
 
-if ($action === 'reset_password' && isset($_GET['id'])) {
-    $resetUser = Database::view('v_admin_users', ['id' => (int)$_GET['id']])[0] ?? null;
-    if (!$resetUser || $resetUser['id'] === (int)$_SESSION['admin_id']) {
+if (($action === 'reset_password' || $action === 'edit') && isset($_GET['id'])) {
+    $editUser = Database::view('v_admin_users', ['id' => (int)$_GET['id']])[0] ?? null;
+    if (!$editUser) {
         $action = 'list';
-        $error = 'Invalid user for password reset';
+        $error = 'User not found';
+    } elseif ($action === 'reset_password' && $editUser['id'] === (int)$_SESSION['admin_id']) {
+        $action = 'list';
+        $error = 'Cannot reset your own password from here';
     }
 }
 ?>
@@ -128,14 +169,14 @@ if ($action === 'reset_password' && isset($_GET['id'])) {
                             </td>
                             <td><?= date('M j, Y', strtotime($user['created_at'])) ?></td>
                             <td>
+                                <a href="?action=edit&id=<?= $user['id'] ?>" 
+                                   class="btn btn-sm btn-outline-primary">Edit Email</a>
                                 <?php if ($user['id'] !== (int)$_SESSION['admin_id']): ?>
                                     <a href="?action=reset_password&id=<?= $user['id'] ?>" 
                                        class="btn btn-sm btn-outline-warning">Reset Password</a>
                                     <a href="?action=delete&id=<?= $user['id'] ?>" 
                                        class="btn btn-sm btn-outline-danger"
                                        onclick="return confirm('Delete this admin user?')">Delete</a>
-                                <?php else: ?>
-                                    <span class="text-muted">Current user</span>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -167,12 +208,31 @@ if ($action === 'reset_password' && isset($_GET['id'])) {
             </div>
         </form>
         
-    <?php elseif ($action === 'reset_password' && isset($resetUser)): ?>
-        <h1>Reset Password</h1>
-        <p class="text-muted">Resetting password for: <?= htmlspecialchars($resetUser['email']) ?></p>
+    <?php elseif ($action === 'edit' && isset($editUser)): ?>
+        <h1>Edit Email</h1>
+        <p class="text-muted">Editing user: <?= htmlspecialchars($editUser['email']) ?></p>
         
         <form method="post" class="row g-3" style="max-width: 400px;">
-            <input type="hidden" name="id" value="<?= $resetUser['id'] ?>">
+            <input type="hidden" name="id" value="<?= $editUser['id'] ?>">
+            
+            <div class="col-12">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" name="email" 
+                       value="<?= htmlspecialchars($_POST['email'] ?? $editUser['email']) ?>" required>
+            </div>
+            
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Update Email</button>
+                <a href="?" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+        
+    <?php elseif ($action === 'reset_password' && isset($editUser)): ?>
+        <h1>Reset Password</h1>
+        <p class="text-muted">Resetting password for: <?= htmlspecialchars($editUser['email']) ?></p>
+        
+        <form method="post" class="row g-3" style="max-width: 400px;">
+            <input type="hidden" name="id" value="<?= $editUser['id'] ?>">
             
             <div class="col-12">
                 <label class="form-label">New Password</label>
