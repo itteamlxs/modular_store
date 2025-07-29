@@ -15,3 +15,5 @@ $router->get($base . '/envios',    fn() => require __DIR__ . '/controllers/envio
 $router->post($base . '/envios',   fn() => require __DIR__ . '/controllers/envios.php');
 $router->get($base . '/users',     fn() => require __DIR__ . '/controllers/users.php');
 $router->post($base . '/users',    fn() => require __DIR__ . '/controllers/users.php');
+$router->get($base . '/reports', fn() => require __DIR__ . '/controllers/reports.php');
+$router->post($base . '/reports', fn() => require __DIR__ . '/controllers/reports.php');

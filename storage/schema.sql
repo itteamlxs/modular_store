@@ -119,3 +119,78 @@ CREATE OR REPLACE VIEW v_admin_users AS
 SELECT id, email, password_hash, is_admin, created_at 
 FROM users 
 ORDER BY created_at DESC;
+
+-- Sales Report View
+CREATE OR REPLACE VIEW v_reports_sales AS
+SELECT 
+    o.id as order_id,
+    o.stripe_id,
+    o.shipping_name as customer_name,
+    o.shipping_email as customer_email,
+    o.total as order_total,
+    o.status as order_status,
+    o.created_at as order_date,
+    o.card_last4,
+    o.card_brand,
+    COUNT(oi.id) as total_items,
+    GROUP_CONCAT(CONCAT(p.name, ' (', oi.quantity, 'x $', oi.price_each, ')') SEPARATOR ', ') as products
+FROM orders o
+LEFT JOIN order_items oi ON oi.order_id = o.id
+LEFT JOIN products p ON p.id = oi.product_id
+GROUP BY o.id;
+
+-- Shipments Report View
+CREATE OR REPLACE VIEW v_reports_shipments AS
+SELECT 
+    s.id as shipment_id,
+    s.order_id,
+    o.shipping_name as customer_name,
+    o.shipping_email as customer_email,
+    o.shipping_address,
+    o.phone,
+    o.total as order_total,
+    s.status as shipment_status,
+    s.tracking_number,
+    s.shipped_at,
+    s.notes,
+    o.created_at as order_date,
+    s.created_at as shipment_created,
+    s.updated_at as shipment_updated,
+    COUNT(oi.id) as total_items
+FROM shipments s
+JOIN orders o ON o.id = s.order_id
+LEFT JOIN order_items oi ON oi.order_id = o.id
+GROUP BY s.id;
+
+-- Detailed Report View
+CREATE OR REPLACE VIEW v_reports_detailed AS
+SELECT 
+    o.id as order_id,
+    o.stripe_id,
+    o.shipping_name as customer_name,
+    o.shipping_email as customer_email,
+    o.shipping_address,
+    o.phone,
+    o.total as order_total,
+    o.status as order_status,
+    o.created_at as order_date,
+    o.card_last4,
+    o.card_brand,
+    o.ip_address,
+    o.latitude,
+    o.longitude,
+    p.name as product_name,
+    c.name as category_name,
+    oi.quantity,
+    oi.price_each,
+    (oi.quantity * oi.price_each) as item_subtotal,
+    s.status as shipment_status,
+    s.tracking_number,
+    s.shipped_at,
+    s.notes as shipment_notes
+FROM orders o
+LEFT JOIN order_items oi ON oi.order_id = o.id
+LEFT JOIN products p ON p.id = oi.product_id
+LEFT JOIN categories c ON c.id = p.category_id
+LEFT JOIN shipments s ON s.order_id = o.id
+ORDER BY o.created_at DESC, oi.id;
