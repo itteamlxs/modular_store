@@ -17,7 +17,7 @@
                         <h4 class="text-success mb-3" id="modalProductPrice"></h4>
                         <p class="text-muted mb-3">Stock: <span id="modalProductStock"></span></p>
                         
-                        <form id="modalAddToCartForm" action="/modular-store/modules/cart/controllers/add.php" method="post">
+                        <form id="modalAddToCartForm" action="/modular-store/modules/cart/controllers/add-modal.php" method="post">
                             <input type="hidden" id="modalProductId" name="product_id" value="">
                             <div class="mb-3">
                                 <label class="form-label">Cantidad:</label>

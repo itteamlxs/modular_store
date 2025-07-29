@@ -216,5 +216,6 @@ $totalPendientes = count(array_filter($envios, fn($e) => $e['shipment_status'] =
         </div>
     <?php endif; ?>
 </div>
+<?php include __DIR__ . '/../views/footer.php'; ?>
 </body>
 </html>

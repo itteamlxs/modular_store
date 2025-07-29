@@ -149,5 +149,6 @@ if ($format === 'csv') {
         </div>
     <?php endif; ?>
 </div>
+<?php include __DIR__ . '/../views/footer.php'; ?>
 </body>
 </html>

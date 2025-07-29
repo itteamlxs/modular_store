@@ -397,7 +397,7 @@ if ($action === 'view' && isset($_GET['id'])) {
         <a href="?" class="btn btn-primary">← Back to Orders</a>
     <?php endif; ?>
 </div>
-
+<?php include __DIR__ . '/../views/footer.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

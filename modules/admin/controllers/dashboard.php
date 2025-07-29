@@ -96,5 +96,6 @@ $totalRevenue = Database::conn()->query("SELECT SUM(total) as revenue FROM order
         </div>
     </div>
 </div>
+<?php include __DIR__ . '/../views/footer.php'; ?>
 </body>
 </html>

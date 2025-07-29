@@ -244,5 +244,8 @@ if (($action === 'reset_password' || $action === 'edit') && isset($_GET['id'])) 
         </form>
     <?php endif; ?>
 </div>
+
+<?php include __DIR__ . '/../views/footer.php'; ?>
+
 </body>
 </html>
