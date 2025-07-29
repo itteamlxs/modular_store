@@ -8,8 +8,9 @@ require_once __DIR__ . '/../helpers/auth.php';
 requireAdmin();
 
 $message = '';
+$search = sanitize($_GET['search'] ?? '');
+$status = $_GET['status'] ?? '';
 
-// Procesar cambios de estado de envío
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shipping_status'])) {
     $shipmentId = (int)($_POST['shipment_id'] ?? 0);
     $orderId = (int)($_POST['order_id'] ?? 0);
@@ -19,13 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shipping_statu
     $allowedStatuses = ['shipped', 'cancelled', 'returned'];
     if ($orderId && in_array($newStatus, $allowedStatuses)) {
         
-        // Generar tracking automático para shipped
         $trackingNumber = '';
         if ($newStatus === 'shipped') {
             $trackingNumber = 'TRK' . date('Ymd') . str_pad((string)$orderId, 4, '0', STR_PAD_LEFT) . rand(100, 999);
         }
         
-        // Crear shipment si no existe
         if (!$shipmentId) {
             $stmt = Database::conn()->prepare(
                 "INSERT INTO shipments (order_id, status, tracking_number, shipped_at, notes) VALUES (?, ?, ?, ?, ?)"
@@ -33,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shipping_statu
             $shippedAt = $newStatus === 'shipped' ? date('Y-m-d H:i:s') : null;
             $stmt->execute([$orderId, $newStatus, $trackingNumber, $shippedAt, $notes]);
         } else {
-            // Actualizar shipment existente
             $stmt = Database::conn()->prepare(
                 "UPDATE shipments SET status = ?, tracking_number = ?, shipped_at = ?, notes = ?, updated_at = NOW() WHERE id = ?"
             );
@@ -44,8 +42,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shipping_statu
     }
 }
 
-// Obtener envíos pendientes
-$envios = Database::view('v_shipments');
+// Construcción de consulta con filtros
+$sql = "SELECT * FROM v_shipments WHERE 1=1";
+$params = [];
+
+if ($search) {
+    $sql .= " AND (shipping_name LIKE ? OR shipping_email LIKE ? OR order_id LIKE ? OR tracking_number LIKE ?)";
+    $searchTerm = "%{$search}%";
+    $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+}
+
+if ($status) {
+    $sql .= " AND shipment_status = ?";
+    $params[] = $status;
+}
+
+$sql .= " ORDER BY order_date DESC";
+
+$stmt = Database::conn()->prepare($sql);
+$stmt->execute($params);
+$envios = $stmt->fetchAll();
+
 $totalPendientes = count(array_filter($envios, fn($e) => $e['shipment_status'] === 'pending'));
 ?>
 <!doctype html>
@@ -74,7 +91,41 @@ $totalPendientes = count(array_filter($envios, fn($e) => $e['shipment_status'] =
         <span class="badge bg-warning fs-6"><?= $totalPendientes ?> pendientes</span>
     </div>
     
+    <!-- Filtros de búsqueda -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="Buscar por cliente, email, order ID o tracking..." 
+                           value="<?= htmlspecialchars($search) ?>">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="status">
+                        <option value="">Todos los estados</option>
+                        <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>Pendiente</option>
+                        <option value="shipped" <?= $status === 'shipped' ? 'selected' : '' ?>>Enviado</option>
+                        <option value="cancelled" <?= $status === 'cancelled' ? 'selected' : '' ?>>Cancelado</option>
+                        <option value="returned" <?= $status === 'returned' ? 'selected' : '' ?>>Devuelto</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <a href="?" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <?php if ($envios): ?>
+        <div class="mb-3">
+            <small class="text-muted"><?= count($envios) ?> resultados encontrados</small>
+        </div>
+        
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
@@ -156,9 +207,16 @@ $totalPendientes = count(array_filter($envios, fn($e) => $e['shipment_status'] =
         
     <?php else: ?>
         <div class="text-center py-5">
-            <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-            <h3>No hay pedidos para enviar</h3>
-            <p class="text-muted">Los envíos aparecerán aquí cuando haya pedidos pagados</p>
+            <?php if ($search || $status): ?>
+                <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                <h3>No se encontraron resultados</h3>
+                <p class="text-muted">Intenta con otros términos de búsqueda</p>
+                <a href="?" class="btn btn-primary">Ver todos los envíos</a>
+            <?php else: ?>
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h3>No hay pedidos para enviar</h3>
+                <p class="text-muted">Los envíos aparecerán aquí cuando haya pedidos pagados</p>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 </div>

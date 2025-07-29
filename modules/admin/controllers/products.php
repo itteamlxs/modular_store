@@ -54,7 +54,21 @@ if ($action === 'delete' && isset($_GET['id'])) {
     $action = 'list';
 }
 
-$products = Database::view('v_admin_products');
+// Búsqueda
+$search = sanitize($_GET['search'] ?? '');
+$whereClause = '';
+$params = [];
+
+if ($search) {
+    $whereClause = 'WHERE name LIKE ? OR category LIKE ?';
+    $params = ["%$search%", "%$search%"];
+}
+
+$sql = "SELECT * FROM v_admin_products $whereClause ORDER BY name ASC";
+$stmt = Database::conn()->prepare($sql);
+$stmt->execute($params);
+$products = $stmt->fetchAll();
+
 $categories = Database::view('categories');
 
 if ($action === 'edit' && isset($_GET['id'])) {
@@ -91,6 +105,28 @@ if ($action === 'edit' && isset($_GET['id'])) {
             <a href="?action=create" class="btn btn-primary">Add Product</a>
         </div>
         
+        <!-- Formulario de búsqueda -->
+        <form method="GET" class="row mb-4">
+            <div class="col-md-8">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Search products by name or category..." 
+                       value="<?= htmlspecialchars($search) ?>">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Search</button>
+            </div>
+            <div class="col-md-2">
+                <a href="?" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        </form>
+
+        <?php if ($search): ?>
+            <div class="alert alert-info">
+                Search results for: <strong><?= htmlspecialchars($search) ?></strong> 
+                (<?= count($products) ?> products found)
+            </div>
+        <?php endif; ?>
+        
         <div class="table-responsive">
             <table class="table table-striped">
                 <thead>
@@ -104,27 +140,38 @@ if ($action === 'edit' && isset($_GET['id'])) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($products as $product): ?>
+                    <?php if (!$products): ?>
                         <tr>
-                            <td><?= $product['id'] ?></td>
-                            <td><?= htmlspecialchars($product['name']) ?></td>
-                            <td><?= htmlspecialchars($product['category']) ?></td>
-                            <td>$<?= number_format((float)$product['price'], 2) ?></td>
-                            <td><?= $product['stock'] ?></td>
-                            <td>
-                                <a href="?action=edit&id=<?= $product['id'] ?>" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <a href="?action=delete&id=<?= $product['id'] ?>" 
-                                   class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Delete this product?')">Delete</a>
+                            <td colspan="6" class="text-center text-muted">
+                                <?= $search ? 'No products found for your search.' : 'No products available.' ?>
                             </td>
                         </tr>
-                    <?php endforeach; ?>
+                    <?php else: ?>
+                        <?php foreach ($products as $product): ?>
+                            <tr>
+                                <td><?= $product['id'] ?></td>
+                                <td><?= htmlspecialchars($product['name']) ?></td>
+                                <td><?= htmlspecialchars($product['category']) ?></td>
+                                <td>$<?= number_format((float)$product['price'], 2) ?></td>
+                                <td><?= $product['stock'] ?></td>
+                                <td>
+                                    <a href="?action=edit&id=<?= $product['id'] ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a href="?action=delete&id=<?= $product['id'] ?>" 
+                                       class="btn btn-sm btn-outline-danger"
+                                       onclick="return confirm('Delete this product?')">Delete</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
         
     <?php elseif ($action === 'create' || $action === 'edit'): ?>
-        <h1><?= $action === 'create' ? 'Add' : 'Edit' ?> Product</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><?= $action === 'create' ? 'Add' : 'Edit' ?> Product</h1>
+            <a href="?" class="btn btn-secondary">← Back to Products</a>
+        </div>
         
         <form method="post" class="row g-3" style="max-width: 600px;">
             <?php if ($action === 'edit'): ?>
