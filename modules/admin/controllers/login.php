@@ -1,4 +1,5 @@
 <?php
+// modules/admin/controllers/login.php - CON AUDITORÍA
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../../core/bootstrap.php';
@@ -16,6 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user && $user['is_admin'] && password_verify($password, $user['password_hash'])) {
             $_SESSION['admin_id'] = $user['id'];
             $_SESSION['admin_email'] = $user['email'];
+            
+            // AUDITORÍA: Registrar LOGIN
+            $stmt = Database::conn()->prepare("CALL log_user_action('LOGIN', ?, ?, ?)");
+            $stmt->execute([
+                $user['id'],
+                $_SERVER['REMOTE_ADDR'] ?? '',
+                $_SERVER['HTTP_USER_AGENT'] ?? ''
+            ]);
+            
             header('Location: /modular-store/modules/admin/controllers/dashboard.php');
             exit;
         } else {
@@ -66,3 +76,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 </body>
 </html>
+
+<?php
+// modules/admin/controllers/logout.php - CON AUDITORÍA
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../../core/bootstrap.php';
+require_once __DIR__ . '/../../../core/Database.php';
+require_once __DIR__ . '/../helpers/auth.php';
+
+// AUDITORÍA: Registrar LOGOUT antes de destruir sesión
+if (isset($_SESSION['admin_id'])) {
+    $stmt = Database::conn()->prepare("CALL log_user_action('LOGOUT', ?, ?, ?)");
+    $stmt->execute([
+        $_SESSION['admin_id'],
+        $_SERVER['REMOTE_ADDR'] ?? '',
+        $_SERVER['HTTP_USER_AGENT'] ?? ''
+    ]);
+}
+
+adminLogout();

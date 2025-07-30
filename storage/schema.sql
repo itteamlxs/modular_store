@@ -253,6 +253,329 @@ BEGIN
 END$$
 DELIMITER ;
 
+
+-- ============================================================================
+-- 5. SISTEMA DE AUDITORIA DE BASES DE DATOS Y LOGS DE USUARIO
+-- ============================================================================
+
+-- 1. Crear tabla de auditoría
+CREATE TABLE audit_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    table_name VARCHAR(50),
+    record_id INT,
+    action ENUM('INSERT','UPDATE','DELETE','LOGIN','LOGOUT'),
+    old_values JSON,
+    new_values JSON,
+    user_id INT,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_table_record (table_name, record_id),
+    INDEX idx_user_action (user_id, action),
+    INDEX idx_created (created_at)
+);
+
+-- 2. Procedimiento para login/logout
+DELIMITER //
+CREATE PROCEDURE log_user_action(
+    IN p_action ENUM('LOGIN','LOGOUT'),
+    IN p_user_id INT,
+    IN p_ip VARCHAR(45),
+    IN p_user_agent TEXT
+)
+BEGIN
+    INSERT INTO audit_log (action, user_id, ip_address, user_agent)
+    VALUES (p_action, p_user_id, p_ip, p_user_agent);
+END //
+DELIMITER ;
+
+-- 3. Triggers para tabla PRODUCTS
+DELIMITER //
+CREATE TRIGGER products_after_insert
+AFTER INSERT ON products
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, new_values)
+    VALUES ('products', NEW.id, 'INSERT', 
+        JSON_OBJECT(
+            'id', NEW.id,
+            'category_id', NEW.category_id,
+            'name', NEW.name,
+            'price', NEW.price,
+            'stock', NEW.stock,
+            'image_url', NEW.image_url
+        )
+    );
+END //
+
+CREATE TRIGGER products_after_update
+AFTER UPDATE ON products
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values, new_values)
+    VALUES ('products', NEW.id, 'UPDATE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'category_id', OLD.category_id,
+            'name', OLD.name,
+            'price', OLD.price,
+            'stock', OLD.stock,
+            'image_url', OLD.image_url
+        ),
+        JSON_OBJECT(
+            'id', NEW.id,
+            'category_id', NEW.category_id,
+            'name', NEW.name,
+            'price', NEW.price,
+            'stock', NEW.stock,
+            'image_url', NEW.image_url
+        )
+    );
+END //
+
+CREATE TRIGGER products_after_delete
+AFTER DELETE ON products
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values)
+    VALUES ('products', OLD.id, 'DELETE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'category_id', OLD.category_id,
+            'name', OLD.name,
+            'price', OLD.price,
+            'stock', OLD.stock,
+            'image_url', OLD.image_url
+        )
+    );
+END //
+DELIMITER ;
+
+-- 4. Triggers para tabla CATEGORIES
+DELIMITER //
+CREATE TRIGGER categories_after_insert
+AFTER INSERT ON categories
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, new_values)
+    VALUES ('categories', NEW.id, 'INSERT', 
+        JSON_OBJECT(
+            'id', NEW.id,
+            'name', NEW.name,
+            'description', NEW.description
+        )
+    );
+END //
+
+CREATE TRIGGER categories_after_update
+AFTER UPDATE ON categories
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values, new_values)
+    VALUES ('categories', NEW.id, 'UPDATE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'name', OLD.name,
+            'description', OLD.description
+        ),
+        JSON_OBJECT(
+            'id', NEW.id,
+            'name', NEW.name,
+            'description', NEW.description
+        )
+    );
+END //
+
+CREATE TRIGGER categories_after_delete
+AFTER DELETE ON categories
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values)
+    VALUES ('categories', OLD.id, 'DELETE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'name', OLD.name,
+            'description', OLD.description
+        )
+    );
+END //
+DELIMITER ;
+
+-- 5. Triggers para tabla USERS
+DELIMITER //
+CREATE TRIGGER users_after_insert
+AFTER INSERT ON users
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, new_values)
+    VALUES ('users', NEW.id, 'INSERT', 
+        JSON_OBJECT(
+            'id', NEW.id,
+            'email', NEW.email,
+            'is_admin', NEW.is_admin
+            -- Intencionalmente no guardamos password_hash por seguridad
+        )
+    );
+END //
+
+CREATE TRIGGER users_after_update
+AFTER UPDATE ON users
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values, new_values)
+    VALUES ('users', NEW.id, 'UPDATE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'email', OLD.email,
+            'is_admin', OLD.is_admin
+        ),
+        JSON_OBJECT(
+            'id', NEW.id,
+            'email', NEW.email,
+            'is_admin', NEW.is_admin
+        )
+    );
+END //
+
+CREATE TRIGGER users_after_delete
+AFTER DELETE ON users
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values)
+    VALUES ('users', OLD.id, 'DELETE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'email', OLD.email,
+            'is_admin', OLD.is_admin
+        )
+    );
+END //
+DELIMITER ;
+
+-- 6. Triggers para tabla ORDERS
+DELIMITER //
+CREATE TRIGGER orders_after_insert
+AFTER INSERT ON orders
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, new_values)
+    VALUES ('orders', NEW.id, 'INSERT', 
+        JSON_OBJECT(
+            'id', NEW.id,
+            'user_id', NEW.user_id,
+            'stripe_id', NEW.stripe_id,
+            'total', NEW.total,
+            'status', NEW.status,
+            'shipping_name', NEW.shipping_name,
+            'shipping_email', NEW.shipping_email
+        )
+    );
+END //
+
+CREATE TRIGGER orders_after_update
+AFTER UPDATE ON orders
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values, new_values)
+    VALUES ('orders', NEW.id, 'UPDATE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'user_id', OLD.user_id,
+            'stripe_id', OLD.stripe_id,
+            'total', OLD.total,
+            'status', OLD.status,
+            'shipping_name', OLD.shipping_name,
+            'shipping_email', OLD.shipping_email
+        ),
+        JSON_OBJECT(
+            'id', NEW.id,
+            'user_id', NEW.user_id,
+            'stripe_id', NEW.stripe_id,
+            'total', NEW.total,
+            'status', NEW.status,
+            'shipping_name', NEW.shipping_name,
+            'shipping_email', NEW.shipping_email
+        )
+    );
+END //
+
+CREATE TRIGGER orders_after_delete
+AFTER DELETE ON orders
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values)
+    VALUES ('orders', OLD.id, 'DELETE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'user_id', OLD.user_id,
+            'stripe_id', OLD.stripe_id,
+            'total', OLD.total,
+            'status', OLD.status,
+            'shipping_name', OLD.shipping_name,
+            'shipping_email', OLD.shipping_email
+        )
+    );
+END //
+DELIMITER ;
+
+-- 7. Triggers para tabla ORDER_ITEMS
+DELIMITER //
+CREATE TRIGGER order_items_after_insert
+AFTER INSERT ON order_items
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, new_values)
+    VALUES ('order_items', NEW.id, 'INSERT', 
+        JSON_OBJECT(
+            'id', NEW.id,
+            'order_id', NEW.order_id,
+            'product_id', NEW.product_id,
+            'quantity', NEW.quantity,
+            'price_each', NEW.price_each
+        )
+    );
+END //
+
+CREATE TRIGGER order_items_after_update
+AFTER UPDATE ON order_items
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values, new_values)
+    VALUES ('order_items', NEW.id, 'UPDATE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'order_id', OLD.order_id,
+            'product_id', OLD.product_id,
+            'quantity', OLD.quantity,
+            'price_each', OLD.price_each
+        ),
+        JSON_OBJECT(
+            'id', NEW.id,
+            'order_id', NEW.order_id,
+            'product_id', NEW.product_id,
+            'quantity', NEW.quantity,
+            'price_each', NEW.price_each
+        )
+    );
+END //
+
+CREATE TRIGGER order_items_after_delete
+AFTER DELETE ON order_items
+FOR EACH ROW
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, action, old_values)
+    VALUES ('order_items', OLD.id, 'DELETE',
+        JSON_OBJECT(
+            'id', OLD.id,
+            'order_id', OLD.order_id,
+            'product_id', OLD.product_id,
+            'quantity', OLD.quantity,
+            'price_each', OLD.price_each
+        )
+    );
+END //
+DELIMITER ;
+
 -- ============================================================================
 -- 4. SAMPLE DATA INSERTION
 -- ============================================================================
